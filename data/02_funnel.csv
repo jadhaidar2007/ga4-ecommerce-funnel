@@ -1,0 +1,8 @@
+step,event,open_sessions,closed_sessions,pct_of_sessions,pct_of_prev_step,drop_off_pct
+1,session,360129,360129,100,,
+2,view_item,77020,77020,21.39,21.4,78.6
+3,add_to_cart,15188,15173,4.21,19.7,80.3
+4,begin_checkout,11106,5959,1.65,39.3,60.7
+5,add_shipping_info,11105,5959,1.65,100,0
+6,add_payment_info,6815,3858,1.07,64.7,35.3
+7,purchase,4848,2848,0.79,73.8,26.2

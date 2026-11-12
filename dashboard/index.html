@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GA4 Funnel Dashboard - Google Merchandise Store</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --page: #f4f3f0;
+    --surface-1: #fcfcfb;
+    --border: #e4e2dc;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #7a7974;
+    --grid: #ebe9e4;
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+  }
+  @media (prefers-color-scheme: dark) {
+    .viz-root {
+      color-scheme: dark;
+      --page: #121211;
+      --surface-1: #1a1a19;
+      --border: #2c2c2a;
+      --text-primary: #f0efec;
+      --text-secondary: #c3c2b7;
+      --text-muted: #8f8e88;
+      --grid: #2a2a28;
+      --series-1: #3987e5;
+      --series-2: #d95926;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .viz-root {
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 32px 24px 48px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--text-secondary); margin: 0 0 24px; font-size: 14px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .kpi .label { font-size: 12px; color: var(--text-secondary); }
+  .kpi .value { font-size: 26px; font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .kpi .note { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .card.wide { grid-column: 1 / -1; }
+  .card h2 { font-size: 15px; margin: 0 0 2px; }
+  .card p { font-size: 13px; color: var(--text-secondary); margin: 0 0 12px; }
+  .chart { position: relative; height: 260px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid var(--grid); text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--text-secondary); font-weight: 500; }
+  details { margin-top: 10px; font-size: 13px; color: var(--text-secondary); }
+  footer { font-size: 12px; color: var(--text-muted); margin-top: 24px; }
+  footer a { color: inherit; }
+
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="viz-root">
+<div class="wrap">
+  <h1>Where shoppers drop off</h1>
+  <p class="sub">GA4 BigQuery export, Google Merchandise Store sample &middot; 1 Nov 2020 - 31 Jan 2021</p>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid">
+    <div class="card wide">
+      <h2>Session funnel</h2>
+      <p>Share of all sessions that reach each step (any order). Hover a bar for counts.</p>
+      <div class="chart" style="height:280px"><canvas id="funnel"></canvas></div>
+      <details><summary>Table view</summary><div id="funnel-table"></div></details>
+    </div>
+
+    <div class="card">
+      <h2>Conversion by session number</h2>
+      <p>Returning visitors convert far better than first visits.</p>
+      <div class="chart"><canvas id="returning"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Checkout completion by device</h2>
+      <p>Sessions that started checkout and then purchased.</p>
+      <div class="chart"><canvas id="device"></canvas></div>
+    </div>
+
+    <div class="card wide">
+      <h2>Conversion rate by first-touch channel</h2>
+      <p>Referral (highlighted) is the best real channel. traffic_source.medium is the user's first touch, not last click; "(data deleted)" and "&lt;Other&gt;" are anonymised buckets in the sample.</p>
+      <div class="chart"><canvas id="channel"></canvas></div>
+    </div>
+
+    <div class="card wide">
+      <h2>Daily sessions</h2>
+      <p>Traffic peaks early December, then drops off over the holidays.</p>
+      <div class="chart" style="height:220px"><canvas id="daily-sessions"></canvas></div>
+    </div>
+
+    <div class="card wide">
+      <h2>Daily conversion rate</h2>
+      <p>Conversion drops by more than half from about 21 Dec and stays low until mid January.</p>
+      <div class="chart" style="height:220px"><canvas id="daily-cvr"></canvas></div>
+    </div>
+
+    <div class="card wide">
+      <h2>Most viewed products</h2>
+      <p>Top 10 by item views. Item-level purchase data in the sample is incomplete, so view-to-cart is the more reliable column.</p>
+      <div id="products"></div>
+    </div>
+  </div>
+
+  <footer>
+    Built from <code>sql/*.sql</code> &middot; numbers in <code>data/*.csv</code> &middot;
+    see <a href="../docs/insights.md">insights.md</a> for the write-up.
+  </footer>
+</div>
+</div>
+
+<script>
+const DATA = {"overview":[{"users":270154,"sessions":360129,"converting_sessions":4848,"session_conversion_pct":1.35,"revenue_usd":362165,"revenue_per_converting_session":74.7}],"funnel":[{"step":1,"event":"session","open_sessions":360129,"closed_sessions":360129,"pct_of_sessions":100,"pct_of_prev_step":null,"drop_off_pct":null},{"step":2,"event":"view_item","open_sessions":77020,"closed_sessions":77020,"pct_of_sessions":21.39,"pct_of_prev_step":21.4,"drop_off_pct":78.6},{"step":3,"event":"add_to_cart","open_sessions":15188,"closed_sessions":15173,"pct_of_sessions":4.21,"pct_of_prev_step":19.7,"drop_off_pct":80.3},{"step":4,"event":"begin_checkout","open_sessions":11106,"closed_sessions":5959,"pct_of_sessions":1.65,"pct_of_prev_step":39.3,"drop_off_pct":60.7},{"step":5,"event":"add_shipping_info","open_sessions":11105,"closed_sessions":5959,"pct_of_sessions":1.65,"pct_of_prev_step":100,"drop_off_pct":0},{"step":6,"event":"add_payment_info","open_sessions":6815,"closed_sessions":3858,"pct_of_sessions":1.07,"pct_of_prev_step":64.7,"drop_off_pct":35.3},{"step":7,"event":"purchase","open_sessions":4848,"closed_sessions":2848,"pct_of_sessions":0.79,"pct_of_prev_step":73.8,"drop_off_pct":26.2}],"device":[{"device":"desktop","sessions":208942,"view_item_pct":21.5,"add_to_cart_pct":4.2,"checkout_pct":3.06,"purchase_pct":1.32,"checkout_completion_pct":43},{"device":"mobile","sessions":143185,"view_item_pct":21.3,"add_to_cart_pct":4.2,"checkout_pct":3.12,"purchase_pct":1.39,"checkout_completion_pct":44.5},{"device":"tablet","sessions":8002,"view_item_pct":21.2,"add_to_cart_pct":4,"checkout_pct":3,"purchase_pct":1.3,"checkout_completion_pct":43.3}],"channel":[{"medium":"organic","sessions":122841,"share_of_sessions_pct":34.1,"add_to_cart_pct":3.9,"conversion_pct":1.1,"revenue_usd":104007,"revenue_per_session":0.85},{"medium":"(none)","sessions":83459,"share_of_sessions_pct":23.2,"add_to_cart_pct":4.2,"conversion_pct":1.29,"revenue_usd":79650,"revenue_per_session":0.95},{"medium":"referral","sessions":63524,"share_of_sessions_pct":17.6,"add_to_cart_pct":4.6,"conversion_pct":1.66,"revenue_usd":83521,"revenue_per_session":1.31},{"medium":"<Other>","sessions":52058,"share_of_sessions_pct":14.5,"add_to_cart_pct":3.8,"conversion_pct":0.97,"revenue_usd":35470,"revenue_per_session":0.68},{"medium":"(data deleted)","sessions":22629,"share_of_sessions_pct":6.3,"add_to_cart_pct":6.5,"conversion_pct":3.12,"revenue_usd":50461,"revenue_per_session":2.23},{"medium":"cpc","sessions":15618,"share_of_sessions_pct":4.3,"add_to_cart_pct":3.6,"conversion_pct":0.98,"revenue_usd":9056,"revenue_per_session":0.58}],"products":[{"item_name":"Google Navy Speckled Tee","category":"Home/Apparel/Women's/","views":56466,"adds":14094,"units_sold":178,"revenue_usd":4440,"view_to_cart_pct":25,"cart_to_purchase_pct":1.1},{"item_name":"Super G Unisex Joggers","category":"Shop by Brand","views":52758,"adds":12015,"units_sold":308,"revenue_usd":9529,"view_to_cart_pct":22.8,"cart_to_purchase_pct":2.4},{"item_name":"Google Zip Hoodie F/C","category":"Home/Apparel/Men's / Unisex/","views":49795,"adds":13011,"units_sold":273,"revenue_usd":13788,"view_to_cart_pct":26.1,"cart_to_purchase_pct":2},{"item_name":"Google Campus Bike Eco Tee Navy","category":"Home/Apparel/Women's/","views":43140,"adds":11631,"units_sold":56,"revenue_usd":1165,"view_to_cart_pct":27,"cart_to_purchase_pct":0.4},{"item_name":"Google Women's Striped L/S","category":"Women's","views":42142,"adds":11847,"units_sold":0,"revenue_usd":0,"view_to_cart_pct":28.1,"cart_to_purchase_pct":0},{"item_name":"Android Large Removable Sticker Sheet","category":"Home/Stationery/Stickers/","views":38604,"adds":10395,"units_sold":134,"revenue_usd":234,"view_to_cart_pct":26.9,"cart_to_purchase_pct":0.5},{"item_name":"Android SM S/F18 Sticker Sheet","category":"Home/Stationery/Stickers/","views":37988,"adds":10347,"units_sold":186,"revenue_usd":342,"view_to_cart_pct":27.2,"cart_to_purchase_pct":1.1},{"item_name":"Google Tee Yellow","category":"Home/Sale/","views":34873,"adds":9090,"units_sold":39,"revenue_usd":363,"view_to_cart_pct":26.1,"cart_to_purchase_pct":0.4},{"item_name":"Google F/C Long Sleeve Tee Charcoal","category":"Home/Apparel/Men's / Unisex/","views":34275,"adds":9551,"units_sold":0,"revenue_usd":0,"view_to_cart_pct":27.9,"cart_to_purchase_pct":0},{"item_name":"Google Badge Heavyweight Pullover Black","category":"Home/Apparel/Women's/","views":33602,"adds":10139,"units_sold":201,"revenue_usd":9712,"view_to_cart_pct":30.2,"cart_to_purchase_pct":1.8},{"item_name":"YouTube Icon Tee Grey","category":"Apparel","views":33523,"adds":5631,"units_sold":69,"revenue_usd":1356,"view_to_cart_pct":16.8,"cart_to_purchase_pct":1.2},{"item_name":"Google Small Standard Journal Navy","category":"Home/Sale/","views":33492,"adds":9387,"units_sold":169,"revenue_usd":992,"view_to_cart_pct":28,"cart_to_purchase_pct":0.8},{"item_name":"Google Heather Green Speckled Tee","category":"Apparel","views":33034,"adds":6033,"units_sold":76,"revenue_usd":1735,"view_to_cart_pct":18.3,"cart_to_purchase_pct":1.3},{"item_name":"Android Super Hero 3D Framed Art","category":"Home/Sale/","views":32278,"adds":8000,"units_sold":31,"revenue_usd":500,"view_to_cart_pct":24.8,"cart_to_purchase_pct":0.4},{"item_name":"Google Crewneck Sweatshirt Navy","category":"Uncategorized Items","views":32271,"adds":10631,"units_sold":236,"revenue_usd":10714,"view_to_cart_pct":32.9,"cart_to_purchase_pct":2.1},{"item_name":"Android Large Trace Journal Black","category":"Home/Sale/","views":32257,"adds":8565,"units_sold":32,"revenue_usd":217,"view_to_cart_pct":26.6,"cart_to_purchase_pct":0.3},{"item_name":"Google Sherpa Zip Hoodie Charcoal","category":null,"views":32219,"adds":5837,"units_sold":115,"revenue_usd":6397,"view_to_cart_pct":18.1,"cart_to_purchase_pct":1.8},{"item_name":"Google Tee Green","category":"Home/Sale/","views":31578,"adds":8136,"units_sold":18,"revenue_usd":164,"view_to_cart_pct":25.8,"cart_to_purchase_pct":0.2},{"item_name":"Google Land & Sea French Terry Sweatshirt","category":"Home/Apparel/Women's/","views":31068,"adds":5180,"units_sold":30,"revenue_usd":1375,"view_to_cart_pct":16.7,"cart_to_purchase_pct":0.6},{"item_name":"Android Techie 3D Framed Art","category":"Accessories","views":31021,"adds":8134,"units_sold":41,"revenue_usd":688,"view_to_cart_pct":26.2,"cart_to_purchase_pct":0.5},{"item_name":"Android Small Trace Journal Black","category":"Home/Sale/","views":30471,"adds":7995,"units_sold":31,"revenue_usd":166,"view_to_cart_pct":26.2,"cart_to_purchase_pct":0.2},{"item_name":"YouTube Women's Favorite Tee White","category":null,"views":29872,"adds":7905,"units_sold":6,"revenue_usd":56,"view_to_cart_pct":26.5,"cart_to_purchase_pct":0.1},{"item_name":"Google Crewneck Sweatshirt Green","category":"Home/Apparel/Women's/","views":28084,"adds":8494,"units_sold":184,"revenue_usd":8382,"view_to_cart_pct":30.2,"cart_to_purchase_pct":2.1},{"item_name":"Google F/C Long Sleeve Tee Ash","category":"Home/Apparel/Men's / Unisex/","views":27987,"adds":9137,"units_sold":0,"revenue_usd":0,"view_to_cart_pct":32.6,"cart_to_purchase_pct":0},{"item_name":"YouTube Icon Tee Charcoal","category":null,"views":27299,"adds":5240,"units_sold":92,"revenue_usd":1805,"view_to_cart_pct":19.2,"cart_to_purchase_pct":1.7}],"daily":[{"day":"2020-11-01","sessions":2625,"converting_sessions":13,"conversion_pct":0.5,"revenue_usd":773},{"day":"2020-11-02","sessions":3726,"converting_sessions":40,"conversion_pct":1.07,"revenue_usd":4789},{"day":"2020-11-03","sessions":5347,"converting_sessions":48,"conversion_pct":0.9,"revenue_usd":3497},{"day":"2020-11-04","sessions":4325,"converting_sessions":28,"conversion_pct":0.65,"revenue_usd":2013},{"day":"2020-11-05","sessions":3840,"converting_sessions":26,"conversion_pct":0.68,"revenue_usd":1792},{"day":"2020-11-06","sessions":3319,"converting_sessions":48,"conversion_pct":1.45,"revenue_usd":3438},{"day":"2020-11-07","sessions":2271,"converting_sessions":28,"conversion_pct":1.23,"revenue_usd":2531},{"day":"2020-11-08","sessions":2163,"converting_sessions":31,"conversion_pct":1.43,"revenue_usd":3760},{"day":"2020-11-09","sessions":3271,"converting_sessions":43,"conversion_pct":1.31,"revenue_usd":2181},{"day":"2020-11-10","sessions":3824,"converting_sessions":63,"conversion_pct":1.65,"revenue_usd":4014},{"day":"2020-11-11","sessions":3809,"converting_sessions":63,"conversion_pct":1.65,"revenue_usd":4428},{"day":"2020-11-12","sessions":3693,"converting_sessions":51,"conversion_pct":1.38,"revenue_usd":3349},{"day":"2020-11-13","sessions":3338,"converting_sessions":69,"conversion_pct":2.07,"revenue_usd":5831},{"day":"2020-11-14","sessions":2360,"converting_sessions":29,"conversion_pct":1.23,"revenue_usd":2338},{"day":"2020-11-15","sessions":2213,"converting_sessions":23,"conversion_pct":1.04,"revenue_usd":1553},{"day":"2020-11-16","sessions":3532,"converting_sessions":67,"conversion_pct":1.9,"revenue_usd":4976},{"day":"2020-11-17","sessions":4063,"converting_sessions":85,"conversion_pct":2.09,"revenue_usd":6227},{"day":"2020-11-18","sessions":4126,"converting_sessions":50,"conversion_pct":1.21,"revenue_usd":4575},{"day":"2020-11-19","sessions":4189,"converting_sessions":47,"conversion_pct":1.12,"revenue_usd":6668},{"day":"2020-11-20","sessions":4127,"converting_sessions":62,"conversion_pct":1.5,"revenue_usd":8174},{"day":"2020-11-21","sessions":3190,"converting_sessions":34,"conversion_pct":1.07,"revenue_usd":4038},{"day":"2020-11-22","sessions":2687,"converting_sessions":29,"conversion_pct":1.08,"revenue_usd":3428},{"day":"2020-11-23","sessions":3960,"converting_sessions":64,"conversion_pct":1.62,"revenue_usd":8864},{"day":"2020-11-24","sessions":4422,"converting_sessions":97,"conversion_pct":2.19,"revenue_usd":10097},{"day":"2020-11-25","sessions":4604,"converting_sessions":85,"conversion_pct":1.85,"revenue_usd":8094},{"day":"2020-11-26","sessions":4177,"converting_sessions":56,"conversion_pct":1.34,"revenue_usd":4449},{"day":"2020-11-27","sessions":3977,"converting_sessions":89,"conversion_pct":2.24,"revenue_usd":6439},{"day":"2020-11-28","sessions":3387,"converting_sessions":74,"conversion_pct":2.18,"revenue_usd":6092},{"day":"2020-11-29","sessions":3253,"converting_sessions":50,"conversion_pct":1.54,"revenue_usd":3938},{"day":"2020-11-30","sessions":4583,"converting_sessions":126,"conversion_pct":2.75,"revenue_usd":11944},{"day":"2020-12-01","sessions":4983,"converting_sessions":99,"conversion_pct":1.99,"revenue_usd":6228},{"day":"2020-12-02","sessions":4801,"converting_sessions":76,"conversion_pct":1.58,"revenue_usd":5218},{"day":"2020-12-03","sessions":5182,"converting_sessions":86,"conversion_pct":1.66,"revenue_usd":4324},{"day":"2020-12-04","sessions":4714,"converting_sessions":86,"conversion_pct":1.82,"revenue_usd":6509},{"day":"2020-12-05","sessions":3498,"converting_sessions":76,"conversion_pct":2.17,"revenue_usd":6321},{"day":"2020-12-06","sessions":3327,"converting_sessions":41,"conversion_pct":1.23,"revenue_usd":2498},{"day":"2020-12-07","sessions":5451,"converting_sessions":94,"conversion_pct":1.72,"revenue_usd":8800},{"day":"2020-12-08","sessions":7562,"converting_sessions":107,"conversion_pct":1.41,"revenue_usd":8197},{"day":"2020-12-09","sessions":6282,"converting_sessions":133,"conversion_pct":2.12,"revenue_usd":10997},{"day":"2020-12-10","sessions":5993,"converting_sessions":130,"conversion_pct":2.17,"revenue_usd":10893},{"day":"2020-12-11","sessions":5607,"converting_sessions":145,"conversion_pct":2.59,"revenue_usd":10129},{"day":"2020-12-12","sessions":4135,"converting_sessions":100,"conversion_pct":2.42,"revenue_usd":6284},{"day":"2020-12-13","sessions":3699,"converting_sessions":63,"conversion_pct":1.7,"revenue_usd":4421},{"day":"2020-12-14","sessions":5098,"converting_sessions":86,"conversion_pct":1.69,"revenue_usd":8569},{"day":"2020-12-15","sessions":5741,"converting_sessions":119,"conversion_pct":2.07,"revenue_usd":10280},{"day":"2020-12-16","sessions":5528,"converting_sessions":115,"conversion_pct":2.08,"revenue_usd":10877},{"day":"2020-12-17","sessions":5345,"converting_sessions":94,"conversion_pct":1.76,"revenue_usd":6933},{"day":"2020-12-18","sessions":4824,"converting_sessions":78,"conversion_pct":1.62,"revenue_usd":6759},{"day":"2020-12-19","sessions":3587,"converting_sessions":39,"conversion_pct":1.09,"revenue_usd":2459},{"day":"2020-12-20","sessions":3288,"converting_sessions":18,"conversion_pct":0.55,"revenue_usd":1399},{"day":"2020-12-21","sessions":4006,"converting_sessions":50,"conversion_pct":1.25,"revenue_usd":3552},{"day":"2020-12-22","sessions":3838,"converting_sessions":55,"conversion_pct":1.43,"revenue_usd":3107},{"day":"2020-12-23","sessions":3443,"converting_sessions":53,"conversion_pct":1.54,"revenue_usd":4418},{"day":"2020-12-24","sessions":2798,"converting_sessions":22,"conversion_pct":0.79,"revenue_usd":1192},{"day":"2020-12-25","sessions":2645,"converting_sessions":17,"conversion_pct":0.64,"revenue_usd":552},{"day":"2020-12-26","sessions":2676,"converting_sessions":16,"conversion_pct":0.6,"revenue_usd":734},{"day":"2020-12-27","sessions":2677,"converting_sessions":20,"conversion_pct":0.75,"revenue_usd":1161},{"day":"2020-12-28","sessions":3356,"converting_sessions":33,"conversion_pct":0.98,"revenue_usd":2147},{"day":"2020-12-29","sessions":3435,"converting_sessions":21,"conversion_pct":0.61,"revenue_usd":1368},{"day":"2020-12-30","sessions":3213,"converting_sessions":21,"conversion_pct":0.65,"revenue_usd":1604},{"day":"2020-12-31","sessions":2619,"converting_sessions":22,"conversion_pct":0.84,"revenue_usd":2595},{"day":"2021-01-01","sessions":2308,"converting_sessions":12,"conversion_pct":0.52,"revenue_usd":975},{"day":"2021-01-02","sessions":2728,"converting_sessions":14,"conversion_pct":0.51,"revenue_usd":1026},{"day":"2021-01-03","sessions":2785,"converting_sessions":15,"conversion_pct":0.54,"revenue_usd":653},{"day":"2021-01-04","sessions":3367,"converting_sessions":15,"conversion_pct":0.45,"revenue_usd":733},{"day":"2021-01-05","sessions":4485,"converting_sessions":28,"conversion_pct":0.62,"revenue_usd":1167},{"day":"2021-01-06","sessions":5995,"converting_sessions":27,"conversion_pct":0.45,"revenue_usd":1976},{"day":"2021-01-07","sessions":4660,"converting_sessions":26,"conversion_pct":0.56,"revenue_usd":1480},{"day":"2021-01-08","sessions":4262,"converting_sessions":33,"conversion_pct":0.77,"revenue_usd":1671},{"day":"2021-01-09","sessions":3258,"converting_sessions":18,"conversion_pct":0.55,"revenue_usd":1363},{"day":"2021-01-10","sessions":3002,"converting_sessions":15,"conversion_pct":0.5,"revenue_usd":1012},{"day":"2021-01-11","sessions":3953,"converting_sessions":26,"conversion_pct":0.66,"revenue_usd":1458},{"day":"2021-01-12","sessions":4721,"converting_sessions":43,"conversion_pct":0.91,"revenue_usd":2547},{"day":"2021-01-13","sessions":4570,"converting_sessions":35,"conversion_pct":0.77,"revenue_usd":1858},{"day":"2021-01-14","sessions":4363,"converting_sessions":47,"conversion_pct":1.08,"revenue_usd":3274},{"day":"2021-01-15","sessions":3935,"converting_sessions":38,"conversion_pct":0.97,"revenue_usd":2071},{"day":"2021-01-16","sessions":3177,"converting_sessions":24,"conversion_pct":0.76,"revenue_usd":1461},{"day":"2021-01-17","sessions":2988,"converting_sessions":14,"conversion_pct":0.47,"revenue_usd":481},{"day":"2021-01-18","sessions":3610,"converting_sessions":18,"conversion_pct":0.5,"revenue_usd":1223},{"day":"2021-01-19","sessions":4187,"converting_sessions":47,"conversion_pct":1.12,"revenue_usd":3756},{"day":"2021-01-20","sessions":4805,"converting_sessions":95,"conversion_pct":1.98,"revenue_usd":6809},{"day":"2021-01-21","sessions":4687,"converting_sessions":50,"conversion_pct":1.07,"revenue_usd":4225},{"day":"2021-01-22","sessions":4089,"converting_sessions":89,"conversion_pct":2.18,"revenue_usd":5621},{"day":"2021-01-23","sessions":3132,"converting_sessions":41,"conversion_pct":1.31,"revenue_usd":2600},{"day":"2021-01-24","sessions":2968,"converting_sessions":35,"conversion_pct":1.18,"revenue_usd":2732},{"day":"2021-01-25","sessions":3906,"converting_sessions":58,"conversion_pct":1.48,"revenue_usd":3027},{"day":"2021-01-26","sessions":4089,"converting_sessions":49,"conversion_pct":1.2,"revenue_usd":1217},{"day":"2021-01-27","sessions":4599,"converting_sessions":51,"conversion_pct":1.11,"revenue_usd":457},{"day":"2021-01-28","sessions":4216,"converting_sessions":55,"conversion_pct":1.3,"revenue_usd":128},{"day":"2021-01-29","sessions":3791,"converting_sessions":53,"conversion_pct":1.4,"revenue_usd":190},{"day":"2021-01-30","sessions":2900,"converting_sessions":26,"conversion_pct":0.9,"revenue_usd":159},{"day":"2021-01-31","sessions":2841,"converting_sessions":18,"conversion_pct":0.63,"revenue_usd":0}],"returning":[{"session_bucket":"1st session","sessions":261238,"add_to_cart_pct":3.4,"checkout_pct":2.29,"conversion_pct":0.68},{"session_bucket":"2-3","sessions":65111,"add_to_cart_pct":5.4,"checkout_pct":4.02,"conversion_pct":2.28},{"session_bucket":"4+","sessions":33780,"add_to_cart_pct":8.4,"checkout_pct":7.45,"conversion_pct":4.69}]};
+
+const css = getComputedStyle(document.querySelector(".viz-root"));
+const v = name => css.getPropertyValue(name).trim();
+const C = {
+  s1: v("--series-1"), s2: v("--series-2"),
+  text: v("--text-secondary"), muted: v("--text-muted"), grid: v("--grid"), surface: v("--surface-1")
+};
+
+Chart.defaults.font.family = getComputedStyle(document.querySelector(".viz-root")).fontFamily;
+Chart.defaults.font.size = 12;
+Chart.defaults.color = C.text;
+Chart.defaults.plugins.legend.display = false;
+Chart.defaults.maintainAspectRatio = false;
+Chart.defaults.plugins.tooltip.backgroundColor = C.surface;
+Chart.defaults.plugins.tooltip.titleColor = v("--text-primary");
+Chart.defaults.plugins.tooltip.bodyColor = C.text;
+Chart.defaults.plugins.tooltip.borderColor = v("--border");
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+
+const fmt = n => n.toLocaleString("en-US");
+const pct = (n, d = 1) => n.toFixed(d) + "%";
+
+// ---- kpis
+const o = DATA.overview[0];
+const f = DATA.funnel;
+const step = name => f.find(r => r.event === name);
+const checkoutAbandon = 100 - 100 * step("purchase").open_sessions / step("begin_checkout").open_sessions;
+const cartAbandon = 100 - 100 * step("purchase").open_sessions / step("add_to_cart").open_sessions;
+
+const kpis = [
+  ["Sessions", fmt(o.sessions), fmt(o.users) + " users"],
+  ["Conversion rate", pct(o.session_conversion_pct, 2), fmt(o.converting_sessions) + " sessions bought"],
+  ["Revenue", "$" + fmt(o.revenue_usd), "$" + o.revenue_per_converting_session + " per buying session"],
+  ["Cart abandonment", pct(cartAbandon), "carted but didn't buy"],
+  ["Checkout abandonment", pct(checkoutAbandon), "started checkout, didn't buy"]
+];
+document.getElementById("kpis").innerHTML = kpis.map(([l, val, n]) =>
+  `<div class="kpi"><div class="label">${l}</div><div class="value">${val}</div><div class="note">${n}</div></div>`
+).join("");
+
+// ---- helpers
+function hbar(id, labels, values, opts = {}) {
+  return new Chart(document.getElementById(id), {
+    type: "bar",
+    data: { labels, datasets: [{
+      data: values,
+      backgroundColor: opts.colors || C.s1,
+      borderRadius: 4, borderSkipped: "start",
+      barPercentage: 0.7, categoryPercentage: 0.9
+    }] },
+    options: {
+      indexAxis: opts.vertical ? "x" : "y",
+      scales: {
+        [opts.vertical ? "y" : "x"]: {
+          grid: { color: C.grid }, border: { display: false },
+          ticks: { callback: val => val + "%" }, max: opts.max
+        },
+        [opts.vertical ? "x" : "y"]: { grid: { display: false }, border: { color: C.grid } }
+      },
+      plugins: { tooltip: { callbacks: { label: opts.tooltip || (c => pct(c.raw, 2)) } } }
+    }
+  });
+}
+
+// ---- funnel
+const fLabels = ["All sessions", "Viewed a product", "Added to cart", "Began checkout", "Shipping info", "Payment info", "Purchased"];
+const fVals = f.map(r => +(100 * r.open_sessions / f[0].open_sessions).toFixed(2));
+hbar("funnel", fLabels, fVals, {
+  max: 100,
+  tooltip: c => `${pct(c.raw, 2)} of sessions (${fmt(f[c.dataIndex].open_sessions)})`
+});
+document.getElementById("funnel-table").innerHTML =
+  "<table><tr><th>Step</th><th>Sessions</th><th>% of all</th><th>% of previous</th></tr>" +
+  f.map((r, i) => `<tr><td>${fLabels[i]}</td><td>${fmt(r.open_sessions)}</td><td>${pct(fVals[i], 2)}</td>
+    <td>${i ? pct(100 * r.open_sessions / f[i - 1].open_sessions) : "-"}</td></tr>`).join("") +
+  "</table>";
+
+// ---- returning
+const nr = DATA.returning;
+hbar("returning", nr.map(r => r.session_bucket === "1st session" ? "1st session" : "Session " + r.session_bucket),
+  nr.map(r => r.conversion_pct), {
+    vertical: true,
+    tooltip: c => `${pct(c.raw, 2)} conversion (${fmt(nr[c.dataIndex].sessions)} sessions)`
+  });
+
+// ---- device
+const dv = DATA.device;
+hbar("device", dv.map(r => r.device[0].toUpperCase() + r.device.slice(1)), dv.map(r => r.checkout_completion_pct), {
+  vertical: true, max: 100,
+  tooltip: c => `${pct(c.raw)} completed (${fmt(dv[c.dataIndex].sessions)} sessions)`
+});
+
+// ---- channel (highlight the best one)
+const ch = DATA.channel.slice().sort((a, b) => b.conversion_pct - a.conversion_pct);
+// "(data deleted)" = users whose data was removed for consent reasons, not a real channel
+const real = ch.filter(r => !r.medium.startsWith("(data") && !r.medium.startsWith("<"));
+const best = real[0].medium;
+hbar("channel", ch.map(r => r.medium), ch.map(r => r.conversion_pct), {
+  colors: ch.map(r => r.medium === best ? C.s2 : C.s1),
+  tooltip: c => {
+    const r = ch[c.dataIndex];
+    return `${pct(r.conversion_pct, 2)} conversion, ${r.share_of_sessions_pct}% of sessions, $${r.revenue_per_session}/session`;
+  }
+});
+
+// ---- daily
+function line(id, key, suffix = "") {
+  const d = DATA.daily;
+  new Chart(document.getElementById(id), {
+    type: "line",
+    data: {
+      labels: d.map(r => r.day),
+      datasets: [{ data: d.map(r => r[key]), borderColor: C.s1, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.25 }]
+    },
+    options: {
+      interaction: { mode: "index", intersect: false },
+      scales: {
+        x: { grid: { display: false }, border: { color: C.grid },
+             ticks: { maxTicksLimit: 7, callback(val) {
+               return new Date(this.getLabelForValue(val)).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+             } } },
+        y: { grid: { color: C.grid }, border: { display: false }, beginAtZero: true,
+             ticks: { callback: val => fmt(val) + suffix } }
+      },
+      plugins: { tooltip: { callbacks: { label: c => fmt(c.raw) + suffix } } }
+    }
+  });
+}
+line("daily-sessions", "sessions");
+line("daily-cvr", "conversion_pct", "%");
+
+// ---- products
+const pr = DATA.products.slice(0, 10);
+document.getElementById("products").innerHTML =
+  "<table><tr><th>Product</th><th>Views</th><th>Add to carts</th><th>View to cart</th><th>Units sold</th></tr>" +
+  pr.map(r => `<tr><td>${r.item_name}</td><td>${fmt(r.views)}</td><td>${fmt(r.adds)}</td>
+    <td>${pct(r.view_to_cart_pct)}</td><td>${fmt(r.units_sold)}</td></tr>`).join("") +
+  "</table>";
+</script>
+</body>
+</html>
