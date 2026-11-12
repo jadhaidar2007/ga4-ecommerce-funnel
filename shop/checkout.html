@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Checkout - Northdock Supply</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="js/config.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/cart.js"></script>
+</head>
+<body>
+  <header>
+    <a class="logo" href="index.html">NORTHDOCK SUPPLY</a>
+    <a class="cart-link" href="cart.html">Cart (<span id="cart-count">0</span>)</a>
+  </header>
+
+  <main>
+    <h1>Checkout</h1>
+    <p class="muted" id="summary"></p>
+
+    <form id="form" onsubmit="return false">
+      <div class="step" id="step-shipping">
+        <b>1. Shipping</b>
+        <label>Full name</label><input required id="name">
+        <label>Address</label><input required id="address">
+        <label>Shipping</label>
+        <select id="shipping">
+          <option value="Standard">Standard (free, 3-5 days)</option>
+          <option value="Express">Express (€6.90, next day)</option>
+        </select>
+        <p><button id="to-payment">Continue to payment</button></p>
+      </div>
+
+      <div class="step locked" id="step-payment">
+        <b>2. Payment</b>
+        <label>Payment method</label>
+        <select id="payment">
+          <option>Credit card</option>
+          <option>PayPal</option>
+          <option>Klarna</option>
+        </select>
+        <p class="muted">Demo shop, nothing gets charged.</p>
+        <p><button id="place">Place order</button></p>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    const items = Cart.items();
+    if (!items.length) location.href = "cart.html";
+
+    document.getElementById("summary").textContent =
+      items.length + " item(s), " + euro(Cart.total());
+
+    let shippingCost = 0;
+
+    document.getElementById("to-payment").addEventListener("click", () => {
+      const name = document.getElementById("name");
+      const address = document.getElementById("address");
+      if (!name.value || !address.value) {
+        (name.value ? address : name).focus();
+        return;
+      }
+      const tier = document.getElementById("shipping").value;
+      shippingCost = tier === "Express" ? 6.9 : 0;
+
+      track("add_shipping_info", { shipping_tier: tier, items });
+
+      document.getElementById("step-shipping").classList.add("locked");
+      document.getElementById("step-payment").classList.remove("locked");
+    });
+
+    document.getElementById("place").addEventListener("click", () => {
+      const method = document.getElementById("payment").value;
+      track("add_payment_info", { payment_type: method, items });
+
+      const value = +Cart.total().toFixed(2);
+      const orderId = "ND-" + Date.now().toString(36).toUpperCase();
+
+      track("purchase", {
+        transaction_id: orderId,
+        value: value,
+        shipping: shippingCost,
+        tax: +(value - value / 1.19).toFixed(2), // prices incl. 19% VAT
+        items
+      });
+
+      Cart.clear();
+      location.href = "thanks.html?order=" + orderId;
+    });
+  </script>
+</body>
+</html>

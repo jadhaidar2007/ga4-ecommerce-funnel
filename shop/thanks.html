@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thanks - Northdock Supply</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="js/config.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/cart.js"></script>
+</head>
+<body>
+  <header>
+    <a class="logo" href="index.html">NORTHDOCK SUPPLY</a>
+    <a class="cart-link" href="cart.html">Cart (<span id="cart-count">0</span>)</a>
+  </header>
+  <main>
+    <h1>Thanks for your order</h1>
+    <p>Order number: <b id="order"></b></p>
+    <p class="muted">This is a demo shop, nothing will actually ship.</p>
+    <p><a class="btn" href="index.html">Back to the shop</a></p>
+  </main>
+  <script>
+    document.getElementById("order").textContent =
+      new URLSearchParams(location.search).get("order") || "-";
+  </script>
+</body>
+</html>

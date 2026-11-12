@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Northdock Supply</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="js/config.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/cart.js"></script>
+</head>
+<body>
+  <header>
+    <a class="logo" href="index.html">NORTHDOCK SUPPLY</a>
+    <a class="cart-link" href="cart.html">Cart (<span id="cart-count">0</span>)</a>
+  </header>
+
+  <main>
+    <h1>All products</h1>
+    <div class="grid" id="grid"></div>
+  </main>
+
+  <script>
+    const LIST = { item_list_id: "all_products", item_list_name: "All products" };
+    const grid = document.getElementById("grid");
+
+    PRODUCTS.forEach((p, i) => {
+      const a = document.createElement("a");
+      a.className = "card";
+      a.href = "product.html?id=" + p.item_id;
+      a.innerHTML = `
+        <div class="thumb" style="background:${COLORS[p.item_category]}">${p.img}</div>
+        <div class="info">
+          <div class="name">${p.item_name}</div>
+          <div class="price">${euro(p.price)}</div>
+        </div>`;
+      a.addEventListener("click", () => {
+        track("select_item", { ...LIST, items: [toItem(p, { index: i, ...LIST })] });
+      });
+      grid.appendChild(a);
+    });
+
+    track("view_item_list", {
+      ...LIST,
+      items: PRODUCTS.map((p, i) => toItem(p, { index: i }))
+    });
+  </script>
+</body>
+</html>

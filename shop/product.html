@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Product - Northdock Supply</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="js/config.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/cart.js"></script>
+</head>
+<body>
+  <header>
+    <a class="logo" href="index.html">NORTHDOCK SUPPLY</a>
+    <a class="cart-link" href="cart.html">Cart (<span id="cart-count">0</span>)</a>
+  </header>
+
+  <main id="page"></main>
+
+  <script>
+    const id = new URLSearchParams(location.search).get("id");
+    const p = getProduct(id);
+    const page = document.getElementById("page");
+
+    if (!p) {
+      page.innerHTML = '<p>Product not found. <a href="index.html">Back to shop</a></p>';
+    } else {
+      document.title = p.item_name + " - Northdock Supply";
+      page.innerHTML = `
+        <div class="product">
+          <div class="thumb big" style="background:${COLORS[p.item_category]}">${p.img}</div>
+          <div>
+            <p class="muted">${p.item_category}</p>
+            <h1>${p.item_name}</h1>
+            <p style="font-size:20px">${euro(p.price)}</p>
+            <label for="qty">Quantity</label>
+            <select id="qty" style="width:80px">
+              <option>1</option><option>2</option><option>3</option>
+            </select>
+            <p><button id="add">Add to cart</button></p>
+            <p class="muted" id="added" hidden>Added. <a href="cart.html">Go to cart</a></p>
+          </div>
+        </div>`;
+
+      track("view_item", { items: [toItem(p)] });
+
+      document.getElementById("add").addEventListener("click", () => {
+        const qty = +document.getElementById("qty").value;
+        Cart.add(p.item_id, qty);
+        track("add_to_cart", { items: [toItem(p, { quantity: qty })] });
+        document.getElementById("added").hidden = false;
+      });
+    }
+  </script>
+</body>
+</html>

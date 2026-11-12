@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cart - Northdock Supply</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="js/config.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/cart.js"></script>
+</head>
+<body>
+  <header>
+    <a class="logo" href="index.html">NORTHDOCK SUPPLY</a>
+    <a class="cart-link" href="cart.html">Cart (<span id="cart-count">0</span>)</a>
+  </header>
+
+  <main>
+    <h1>Your cart</h1>
+    <div id="cart"></div>
+  </main>
+
+  <script>
+    function render() {
+      const items = Cart.items();
+      const el = document.getElementById("cart");
+
+      if (!items.length) {
+        el.innerHTML = '<p>Cart is empty. <a href="index.html">Keep shopping</a></p>';
+        return;
+      }
+
+      const rows = items.map(i => `
+        <tr>
+          <td>${i.item_name}</td>
+          <td>${i.quantity}</td>
+          <td class="right">${euro(i.price * i.quantity)}</td>
+          <td class="right"><button class="secondary" data-id="${i.item_id}">Remove</button></td>
+        </tr>`).join("");
+
+      el.innerHTML = `
+        <table>
+          <tr><th>Item</th><th>Qty</th><th class="right">Price</th><th></th></tr>
+          ${rows}
+          <tr><td colspan="2"><b>Total</b></td><td class="right"><b>${euro(Cart.total())}</b></td><td></td></tr>
+        </table>
+        <p class="right"><button id="checkout">Checkout</button></p>`;
+
+      el.querySelectorAll("button[data-id]").forEach(b => {
+        b.addEventListener("click", () => {
+          const item = items.find(i => i.item_id === b.dataset.id);
+          Cart.remove(b.dataset.id);
+          track("remove_from_cart", { items: [item] });
+          render();
+        });
+      });
+
+      document.getElementById("checkout").addEventListener("click", () => {
+        track("begin_checkout", { items: Cart.items() });
+        location.href = "checkout.html";
+      });
+    }
+
+    render();
+    if (Cart.items().length) track("view_cart", { items: Cart.items() });
+  </script>
+</body>
+</html>

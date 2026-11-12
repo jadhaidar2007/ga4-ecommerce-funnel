@@ -1,0 +1,93 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  color: #222;
+  background: #faf8f5;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 32px;
+  border-bottom: 1px solid #e6e1d8;
+  background: #fff;
+}
+
+header a { color: inherit; text-decoration: none; }
+.logo { font-weight: 700; letter-spacing: .5px; }
+.cart-link { font-size: 14px; }
+
+main { max-width: 960px; margin: 0 auto; padding: 32px; }
+
+h1 { font-size: 26px; margin: 0 0 20px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e6e1d8;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+}
+.card:hover { border-color: #b9b1a3; }
+.card .info { padding: 12px 14px; }
+.card .name { font-weight: 600; }
+.card .price, .muted { color: #777; font-size: 14px; }
+
+.thumb {
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(0,0,0,.45);
+}
+.thumb.big { height: 320px; border-radius: 6px; }
+
+.product { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+
+button, .btn {
+  display: inline-block;
+  background: #222;
+  color: #fff;
+  border: 0;
+  padding: 12px 20px;
+  border-radius: 4px;
+  font-size: 15px;
+  cursor: pointer;
+  text-decoration: none;
+}
+button.secondary { background: #fff; color: #222; border: 1px solid #ccc; }
+button:disabled { opacity: .4; cursor: default; }
+
+table { width: 100%; border-collapse: collapse; background: #fff; }
+td, th { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+.right { text-align: right; }
+
+form .step {
+  background: #fff;
+  border: 1px solid #e6e1d8;
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+form .step.locked { opacity: .45; pointer-events: none; }
+label { display: block; font-size: 13px; margin: 10px 0 4px; }
+input, select { width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 4px; }
+
+@media (max-width: 640px) {
+  .product { grid-template-columns: 1fr; }
+  main { padding: 20px; }
+}
