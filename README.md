@@ -4,8 +4,8 @@ I wanted to learn the full GA4 analytics workflow end to end, not just the GA4 U
 
 **Main finding:** 56% of sessions that start checkout never buy, and most of them leave between entering shipping info and entering payment. Full write-up in [`docs/insights.md`](docs/insights.md).
 
-- **Dashboard:** [`dashboard/index.html`](dashboard/index.html) (live link below if Pages is on)
-- **Demo shop:** [`shop/`](shop)
+- **Live dashboard:** https://jadhaidar2007.github.io/ga4-ecommerce-funnel/dashboard/
+- **Live demo shop:** https://jadhaidar2007.github.io/ga4-ecommerce-funnel/shop/
 - **SQL:** [`sql/`](sql)
 
 ## What's in here
